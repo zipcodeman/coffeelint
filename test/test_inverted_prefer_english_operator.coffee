@@ -4,9 +4,9 @@ assert = require 'assert'
 coffeelint = require path.join('..', 'lib', 'coffeelint')
 
 configError =
-  prefer_english_operator:
-    level: 'error'
-    invert: true
+    prefer_english_operator:
+        level: 'error'
+        invert: true
 
 vows.describe('InvertedPreferEnglishOperators').addBatch({
 
@@ -36,8 +36,7 @@ vows.describe('InvertedPreferEnglishOperators').addBatch({
             result = coffeelint.lint('x = !!y', configError)
             assert.equal(result.length, 0)
 
-        'cannot be configured at an independent level (invert wins over doubleNotLevel)': ->
-
+        'is overridden by invert': ->
             configError = prefer_english_operator:
                 level: 'error'
                 doubleNotLevel: 'warn'

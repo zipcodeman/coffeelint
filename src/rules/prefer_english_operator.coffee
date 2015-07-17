@@ -1,3 +1,9 @@
+invertObject = (obj) ->
+    new_obj = {}
+    for prop of obj
+        new_obj[obj[prop]] = prop
+    new_obj
+
 module.exports = class RuleProcessor
     rule:
         name: 'prefer_english_operator'
@@ -7,34 +13,36 @@ module.exports = class RuleProcessor
         message: 'Don\'t use &&, ||, ==, !=, or ! (or do!)'
         invert: false
     tokens: ['COMPARE', 'UNARY_MATH', 'LOGIC']
+    mappings:
+        "==": "is",
+        "!=": "isnt",
+        "||": "or",
+        "&&": "and",
+        "!": "not"
+    replace: (tok, alt) -> "Replace \"#{tok}\" with \"#{alt}\""
     lintToken: (token, tokenApi) ->
         config = tokenApi.config[@rule.name]
         level = config.level
         { first_column, last_column } = token[2]
         line = tokenApi.lines[tokenApi.lineNumber]
         actual_token = line[first_column..last_column]
+        if actual_token is '!'
+            if tokenApi.peek(1)?[0] is 'UNARY_MATH'
+                actual_token = '!!'
+            else if tokenApi.peek(-1)?[0] is 'UNARY_MATH'
+                return
+
         context =
             if config.invert is true
-                switch actual_token
-                    when 'is' then 'Replace "is" with "=="'
-                    when 'isnt' then 'Replace "isnt" with "!="'
-                    when 'or' then 'Replace "or" with "||"'
-                    when 'and' then 'Replace "and" with "&&"'
-                    when 'not' then 'Replace "not" with "!"'
+                invertedMappings = invertObject(@mappings)
+                if actual_token in invertedMappings
+                    replace(actual_token, invertedMappings[actual_token])
             else if not config.invert
-                switch actual_token
-                  when '==' then 'Replace "==" with "is"'
-                  when '!=' then 'Replace "!=" with "isnt"'
-                  when '||' then 'Replace "||" with "or"'
-                  when '&&' then 'Replace "&&" with "and"'
-                  when '!'
-                      if tokenApi.peek(1)?[0] is 'UNARY_MATH'
-                          level = config.doubleNotLevel
-                          '"?" is usually better than "!!"'
-                      else if tokenApi.peek(-1)?[0] is 'UNARY_MATH'
-                          undefined
-                      else
-                          'Replace "!" with "not"'
+                if actual_token in @mappings
+                    replace(actual_token, @mappings[actual_token])
+                else if actual_token is "!!"
+                    level = config.doubleNotLevel
+                    '"?" is usually better than "!!"'
             else
                 undefined
 
